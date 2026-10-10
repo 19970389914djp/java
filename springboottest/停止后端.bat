@@ -1,0 +1,12 @@
+@echo off
+chcp 936 >nul
+title 停止 springboottest 后端
+
+set "FOUND=0"
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8080" ^| findstr "LISTENING"') do (
+    echo [提示] 正在停止占用 8080 端口的进程 PID=%%a
+    taskkill /F /PID %%a >nul 2>nul
+    set "FOUND=1"
+)
+if "%FOUND%"=="0" echo [提示] 8080 端口空闲，后端未在运行
+pause

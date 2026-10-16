@@ -1,0 +1,17 @@
+# 依赖与构建产物（本机开机重置会删除，无需入库）
+node_modules/
+target/
+dist/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# 系统文件
+Thumbs.db
+.DS_Store
+
+# 日志
+*.log

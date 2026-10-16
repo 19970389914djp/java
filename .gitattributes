@@ -1,0 +1,3 @@
+# .bat 必须保持 CRLF 原样入库（禁用 EOL 转换），
+# 否则从 GitHub 下载 zip 会得到 LF 版本，cmd.exe 解析错位、脚本静默失效
+*.bat -text

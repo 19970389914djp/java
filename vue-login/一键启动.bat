@@ -50,7 +50,7 @@ start "vue-login 前端 (5173)" cmd /k "%~dp0启动前端.bat"
 
 echo.
 echo [完成] 两个服务已在新窗口启动：
-echo   前端: http://localhost:5173  （会自动打开浏览器）
-echo   后端: http://localhost:8080
+echo   前端: http://192.168.68.27:5173  （会自动打开浏览器）
+echo   后端: http://192.168.68.27:8080
 echo [提示] 若后端编译超时，登录会提示网络异常，等后端就绪后重试即可
 pause

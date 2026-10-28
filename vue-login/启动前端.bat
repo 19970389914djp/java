@@ -54,7 +54,7 @@ if not exist "node_modules\.bin\vite.cmd" (
 )
 echo [提示] 依赖安装完成
 :deps_ok
-echo [提示] 依赖就绪，启动开发服务器: http://localhost:5173
+echo [提示] 依赖就绪，启动开发服务器: http://192.168.68.27:5173
 echo [提示] 关闭本窗口即停止前端服务
 call npm run dev
 pause

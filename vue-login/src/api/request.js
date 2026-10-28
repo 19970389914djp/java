@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-// 统一 axios 实例，/api 前缀由 vite 代理转发到后端 http://localhost:8080
+// 统一 axios 实例，/api 前缀由 vite 代理转发到后端 http://192.168.68.27:8080
 const request = axios.create({
   baseURL: '/api',
   timeout: 10000

@@ -28,6 +28,12 @@
 - **⚠️ 端口污染坑（2026-10-12 已修复）**：WorkBuddy 桌面端会向环境注入 `SERVER__PORT` / `SERVER__HOST`（值为其内部代理端口 53148 等），Spring Boot 宽松绑定会把它们误读为 `server.port` / `server.address`，导致后端绑定到错误端口且启动失败。启动后端脚本已内置修复：启动前清空这两个变量，并用命令行参数 `--server.port=8080` 显式锁定端口（优先级高于环境变量）。若在其他环境遇到"Port 53148 was already in use"之类的诡异报错，即为此因。
 - **Node.js**：WorkBuddy 托管版 `C:\Users\Administrator\.workbuddy\binaries\node\versions\22.22.2-2`（v22，npm 在 PATH），系统版在 `D:\Program Files\nodejs`（v20）。两者都能跑。
 - **Java**：`C:\Program Files\Zulu\zulu-21`（在 PATH）。
+- **⚠️ 局域网 IP 配置（2026-10-28 起）**：前后端统一走本机局域网 IP `192.168.68.27`（不再是 localhost）：
+  - 后端数据源：`springboottest\src\main\resources\application.yml` 的 JDBC URL（`192.168.68.27:3306`）。
+  - 前端代理与监听：`vue-login\vite.config.js` 顶部 `LAN_IP` 常量 + `server.host: '0.0.0.0'`。**换 IP 只需改这一处常量 + application.yml 的 URL**。
+  - MySQL：`root` 原本仅 `@localhost`，已新建 `root@'%'`（同密码 123456），否则按 IP 连库报 `not allowed to connect`。
+  - Windows 防火墙：已添加入站放行规则 `springboottest-8080`、`vite-5173`（TCP）。
+  - IP 若因 DHCP 变化，需同步改 `vite.config.js` 与 `application.yml` 两处。
 - **Maven 不在 PATH**，探测顺序：
   1. `where mvn`
   2. IDEA 自带（脚本用 `D:\IntelliJ IDEA*` / `C:\Program Files\JetBrains\IntelliJ IDEA*` 通配符扫描，不写死版本号）
@@ -49,12 +55,16 @@
 
 启动顺序建议：先后端再前端（一键启动脚本已内置）。Vite 代理按需转发，后端没起好时登录会提示"网络异常"，属正常现象，等后端编译完重试即可。
 
-## 前端页面现状（2026-10-16 起统一为"勒布朗/湖人紫金"主题）
+## 前端页面现状（2026-10-28 起为"King James 个人主页" + 后台管理系统）
 
-- 三个页面 `LoginPage.vue` / `RegisterPage.vue` / `HomePage.vue` 均为湖人紫（#552583 系）+ 金（#FDB927）暗色主题，皇冠 SVG、23 号角标、球场中圈水印等元素复用。
-- **HomePage（首页）**：导航栏（首页/球队/赛程/数据/商城，纯前端切换未接路由）+ 搜索栏 + 生涯荣誉卡 + 高光时刻卡片流。
-  - **2026-10-16 已接入后端**：荣誉卡、热门词、时刻列表来自 `GET /api/home`；搜索输入防抖 300ms 调 `GET /api/search?keyword=xxx`（清空关键词不发请求，直接回全量缓存）。接口封装在 `src/api/home.js`。
-  - 退出登录逻辑未变（清 localStorage 后回登录页）。
+- 全站湖人紫（#552583 系）+ 金（#FDB927）暗色主题，皇冠 SVG、23 号角标等元素复用。
+- **HomePage（首页，登录后进入）**：King James 展示页。导航 `King James | 首页·生涯荣誉·经典时刻·关于詹姆斯`（锚点滚动 + IntersectionObserver 滚动高亮）；全屏 Hero（AI 图 `public/images/hero-bg.png`，标题 KING JAMES / STRIVE FOR GREATNESS / 「查看生涯荣誉」按钮）；关于三卡（静态）；荣誉卡 6 张（DB 驱动 honor 表）；生涯时间轴 7 节点（组件内 `timeline` 静态数组）；经典时刻图文图集（moment 数据 + 4 张 AI 插画按标题匹配 `imageFor()` + 热词芯片筛选调 `/api/search`）。导航栏右侧有「后台管理」按钮（emit `go-admin`）。
+- **后台管理系统（2026-10-28 新增）**：
+  - `AdminLoginPage.vue`（仅账密登录无注册）→ `AdminPage.vue`（honor / moment / hot_keyword 三模块表格 CRUD，弹窗表单 + 删除确认）。
+  - 后端 `/api/admin/*`：`AdminController`/`AdminService`/`Admin`/`AdminMapper`，除 login 外均需请求头 `Authorization: <token>`（内存 token，后端重启失效）。
+  - `admin` 表建表脚本 `springboottest\sql\admin.sql`。账号：`admin/admin123`、`demo@test.com/demo123`（MD5+盐 `@vue-login`，与前台一致）。
+  - 前端接口封装 `src/api/admin.js`；App.vue 页面状态机：login/register/home/adminLogin/adminPage。
+- 退出登录逻辑未变（清 localStorage 后回登录页）。
 
 ## 给 AI 的维护提醒
 
@@ -70,8 +80,9 @@
   ```
   "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -uroot -p123456 < springboottest\sql\user_db.sql
   "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -uroot -p123456 < springboottest\sql\home.sql
+  "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -uroot -p123456 < springboottest\sql\admin.sql
   ```
-  `user_db.sql` 是 `CREATE DATABASE/TABLE IF NOT EXISTS`，重复执行安全；`home.sql`（首页功能三表：honor/moment/hot_keyword，2026-10-16 新增）是 DROP + 重建 + 灌数据，**会重置首页展示数据**，重复执行安全但会还原种子数据。
+  `user_db.sql` 是 `CREATE DATABASE/TABLE IF NOT EXISTS`，重复执行安全；`home.sql`（首页功能三表：honor/moment/hot_keyword，2026-10-16 新增）是 DROP + 重建 + 灌数据，**会重置首页展示数据**，重复执行安全但会还原种子数据；`admin.sql`（后台管理员表，2026-10-28 新增）是 DROP + 重建 + 灌默认账号，重复执行安全。
 - **首页后端（2026-10-16 新增）**：实体 `Moment`/`Honor`/`HotKeyword` + 对应 Mapper + `HomeService`/`HomeServiceImpl` + `HomeController`。接口：
   - `GET /api/home` → `{ honors, hotKeywords, moments }`（荣誉/热词/全部时刻，按 sort_order 排序）
   - `GET /api/search?keyword=xxx` → `{ moments, total }`（按年份/标题/描述/标签 LIKE 模糊匹配，空关键词返回全部）
@@ -79,5 +90,5 @@
 - 脚本内项目路径一律用 `%~dp0` 相对定位，禁止写死绝对路径（Maven 探测路径除外）。
 - **所有启动/停止脚本已内置"位置自检"**：脚本所在目录缺少 `package.json` / `pom.xml`（例如用户在 WinRAR 预览窗口里直接双击运行、或只拷出单个 bat）时会明确报错并退出，不会莫名失败。2026-10-12 用户曾因此报"无法启动"——特征是其回传 zip 里出现 `Rar$DIa*` 临时目录产物、`package-lock.json` 被写坏成 95 字节。遇到此类反馈先确认用户是否完整解压了项目。
 - **2026-10-16 已修复**：从 GitHub 下载的副本里 6 个 `.bat` 全是 LF 换行，导致 `一键启动/停止` 等脚本静默失效（详见上方"换行符坑"）。已全部转 CRLF；`一键启动.bat` 的轮询等待由 `timeout /t 5 /nobreak` 改为 `ping -n 6 127.0.0.1 >nul`（timeout 在 stdin 被重定向时会直接报 "Input redirection is not supported" 而空转）。
-- 前端接口：`POST /api/auth/send-code | register | login`、`GET /api/home | /api/search`，统一 `Result` 结构（code/msg/data），axios 拦截器已解包。
+- 前端接口：`POST /api/auth/send-code | register | login`、`GET /api/home | /api/search`、`POST /api/admin/login | logout`、`GET /api/admin/data`、`POST /api/admin/honor|moment|hot-keyword`（body 带 id 更新不带新增）、`DELETE /api/admin/honor|moment|hot-keyword/{id}`，统一 `Result` 结构（code/msg/data），axios 拦截器已解包。
 - README.md 的项目结构图已过时（缺 `src/api/`、`HomePage.vue`、`RegisterPage.vue`），以本文件为准。

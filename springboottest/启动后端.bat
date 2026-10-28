@@ -78,7 +78,7 @@ rem ---------- 5. 编译并启动 ----------
 rem target 每次开机会被删除，spring-boot:run 会自动重新编译，不依赖旧 target
 rem 依赖已缓存在 %USERPROFILE%\.m2\repository，无需重新下载
 echo [提示] 正在编译并启动后端（target 被删后首次约 1-2 分钟）...
-echo [提示] 后端地址: http://localhost:8080
+echo [提示] 后端地址: http://192.168.68.27:8080
 echo [提示] 关闭本窗口即停止后端服务
 call "%MVN%" spring-boot:run "-Dspring-boot.run.arguments=--server.port=8080"
 pause

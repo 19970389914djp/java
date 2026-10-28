@@ -20,10 +20,12 @@ CREATE TABLE honor (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '生涯荣誉';
 
 INSERT INTO honor (label, value, sort_order) VALUES
-('总冠军',    '4',      1),
-('总决赛 MVP', '4',      2),
-('常规赛 MVP', '4',      3),
-('生涯总得分', '40000+', 4);
+('总冠军',      '4',      1),
+('总决赛 MVP',  '4',      2),
+('常规赛 MVP',  '4',      3),
+('全明星',      '20次',   4),
+('历史总得分王', '40000+', 5),
+('历史助攻王',  '11000+', 6);
 
 -- ---------- 高光时刻 ----------
 DROP TABLE IF EXISTS moment;

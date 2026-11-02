@@ -28,12 +28,11 @@
 - **⚠️ 端口污染坑（2026-10-12 已修复）**：WorkBuddy 桌面端会向环境注入 `SERVER__PORT` / `SERVER__HOST`（值为其内部代理端口 53148 等），Spring Boot 宽松绑定会把它们误读为 `server.port` / `server.address`，导致后端绑定到错误端口且启动失败。启动后端脚本已内置修复：启动前清空这两个变量，并用命令行参数 `--server.port=8080` 显式锁定端口（优先级高于环境变量）。若在其他环境遇到"Port 53148 was already in use"之类的诡异报错，即为此因。
 - **Node.js**：WorkBuddy 托管版 `C:\Users\Administrator\.workbuddy\binaries\node\versions\22.22.2-2`（v22，npm 在 PATH），系统版在 `D:\Program Files\nodejs`（v20）。两者都能跑。
 - **Java**：`C:\Program Files\Zulu\zulu-21`（在 PATH）。
-- **⚠️ 局域网 IP 配置（2026-10-28 起）**：前后端统一走本机局域网 IP `192.168.68.27`（不再是 localhost）：
-  - 后端数据源：`springboottest\src\main\resources\application.yml` 的 JDBC URL（`192.168.68.27:3306`）。
-  - 前端代理与监听：`vue-login\vite.config.js` 顶部 `LAN_IP` 常量 + `server.host: '0.0.0.0'`。**换 IP 只需改这一处常量 + application.yml 的 URL**。
-  - MySQL：`root` 原本仅 `@localhost`，已新建 `root@'%'`（同密码 123456），否则按 IP 连库报 `not allowed to connect`。
-  - Windows 防火墙：已添加入站放行规则 `springboottest-8080`、`vite-5173`（TCP）。
-  - IP 若因 DHCP 变化，需同步改 `vite.config.js` 与 `application.yml` 两处。
+- **⚠️ 数据库连接配置（2026-11-02 起）**：前后端统一走本机 `127.0.0.1`（不再写死局域网 IP，避免换机器/换 IP 失效）：
+  - 后端数据源：`springboottest\src\main\resources\application.yml` 的 JDBC URL（`127.0.0.1:3306`）。
+  - 前端代理：`vue-login\vite.config.js` 顶部 `API_HOST` 常量（`127.0.0.1`）+ `server.host: '0.0.0.0'`（监听所有网卡，手机/其他电脑仍可通过本机局域网 IP:5173 访问前端页面）。
+  - MySQL：本机 MySQL 8.0（`C:\Program Files\MySQL\MySQL Server 8.0`），`root/123456`。
+  - 若需要跨机器连库（如手机访问后端接口），再改回局域网 IP 并确认 MySQL 的 `root@'%'` 账号与防火墙规则（历史方案见 git 提交记录）。
 - **Maven 不在 PATH**，探测顺序：
   1. `where mvn`
   2. IDEA 自带（脚本用 `D:\IntelliJ IDEA*` / `C:\Program Files\JetBrains\IntelliJ IDEA*` 通配符扫描，不写死版本号）

@@ -63,19 +63,24 @@ const allMoments = ref([])  // 全部高光时刻（图集数据源）
 const moments = ref([])     // 当前展示的时刻列表（筛选结果）
 const loadError = ref('')   // 加载失败提示
 
-// 经典时刻配图（AI 生成插画，按内容匹配，未匹配的循环使用）
-const IMG_DRAFT = '/images/moment-2003.png'
-const IMG_BLOCK = '/images/moment-2016-block.png'
-const IMG_TROPHY = '/images/moment-2020.png'
-const IMG_40000 = '/images/moment-40000.png'
-const galleryImages = [IMG_DRAFT, IMG_TROPHY, IMG_BLOCK, IMG_40000]
+// 经典时刻配图（真实照片，来自新浪体育等国内站点，按内容匹配，未匹配的循环使用）
+const IMG_DRAFT = '/images/moment-2003.jpg'       // 骑士早期 23 号（2003 天选之子）
+const IMG_HEAT = '/images/moment-2012.jpg'        // 热火 6 号（2012/2013 冠军时期）
+const IMG_BLOCK = '/images/moment-2016-block.jpg' // 骑士怒吼（2016 翻盘/The Block）
+const IMG_TROPHY = '/images/moment-2020.jpg'      // 湖人怒吼（2020 紫金复辟）
+const IMG_40000 = '/images/moment-40000.jpg'      // 湖人球衣肖像（40000 分里程碑）
+const IMG_RITUAL = '/images/moment-ritual.jpg'    // 赛前氛围肖像（粉笔仪式）
+const galleryImages = [IMG_DRAFT, IMG_HEAT, IMG_BLOCK, IMG_TROPHY, IMG_40000, IMG_RITUAL]
 
 function imageFor(m) {
   const t = (m.title || '') + ' ' + (m.year || '') + ' ' + (m.tags || '')
-  if (t.includes('2003') || t.includes('天选之子')) return IMG_DRAFT
+  if (t.includes('2003') || t.includes('天选之子') || t.includes('选秀') || t.includes('状元')) return IMG_DRAFT
+  if (/首冠|卫冕|热火|2012|2013/.test(t)) return IMG_HEAT
   if (t.includes('The Block') || t.includes('追身大帽') || t.includes('防守')) return IMG_BLOCK
-  if (t.includes('40000') || t.includes('里程碑')) return IMG_40000
-  if (/首冠|卫冕|总冠军|紫金|2020/.test(t)) return IMG_TROPHY
+  if (t.includes('40000') || t.includes('里程碑') || t.includes('得分王')) return IMG_40000
+  if (t.includes('粉笔') || t.includes('仪式')) return IMG_RITUAL
+  if (/总冠军|紫金|2020|湖人/.test(t)) return IMG_TROPHY
+  if (t.includes('2016') || t.includes('骑士') || t.includes('翻盘')) return IMG_BLOCK
   return galleryImages[(m.sortOrder || 0) % galleryImages.length]
 }
 
@@ -138,13 +143,13 @@ const filteredMoments = computed(() => moments.value)
 
 // ===== 生涯时间轴（静态内容） =====
 const timeline = [
-  { year: '2003', title: '天选之子 · 骑士', desc: '阿克伦之子以状元身份加盟克利夫兰骑士，传奇之旅从此启程。', team: 'CLE' },
-  { year: '2012', title: '南海岸 · 首冠', desc: '加盟迈阿密热火，连续四年闯入总决赛，两夺总冠军与 FMVP。', team: 'MIA' },
-  { year: '2014', title: '游子归乡', desc: '「I\'m coming home.」重回克利夫兰，只为兑现那一份承诺。', team: 'CLE' },
-  { year: '2016', title: '1-3 史诗翻盘', desc: '总决赛 1-3 落后 73 胜勇士，连扳三场，为家乡带来 52 年首冠。', team: 'CLE' },
-  { year: '2018', title: '紫金时代', desc: '签约洛杉矶湖人，传奇继续书写。', team: 'LAL' },
-  { year: '2020', title: '第 4 冠 · 曼巴致敬', desc: '园区内率领湖人夺冠，为科比而战，紫金王朝再度闪耀。', team: 'LAL' },
-  { year: '2024', title: '40000 分里程碑', desc: 'NBA 历史首位生涯总得分突破 40000 分的球员，前无古人。', team: 'LAL' }
+  { year: '2003', title: '天选之子 · 骑士', desc: '阿克伦之子以状元身份加盟克利夫兰骑士，传奇之旅从此启程。', team: 'CLE', img: '/images/moment-2003.jpg' },
+  { year: '2012', title: '南海岸 · 首冠', desc: '加盟迈阿密热火，连续四年闯入总决赛，两夺总冠军与 FMVP。', team: 'MIA', img: '/images/moment-2012.jpg' },
+  { year: '2014', title: '游子归乡', desc: '「I\'m coming home.」重回克利夫兰，只为兑现那一份承诺。', team: 'CLE', img: '/images/hero-bg.jpg' },
+  { year: '2016', title: '1-3 史诗翻盘', desc: '总决赛 1-3 落后 73 胜勇士，连扳三场，为家乡带来 52 年首冠。', team: 'CLE', img: '/images/moment-2016-block.jpg' },
+  { year: '2018', title: '紫金时代', desc: '签约洛杉矶湖人，传奇继续书写。', team: 'LAL', img: '/images/timeline-2018.jpg' },
+  { year: '2020', title: '第 4 冠 · 曼巴致敬', desc: '园区内率领湖人夺冠，为科比而战，紫金王朝再度闪耀。', team: 'LAL', img: '/images/moment-2020.jpg' },
+  { year: '2024', title: '40000 分里程碑', desc: 'NBA 历史首位生涯总得分突破 40000 分的球员，前无古人。', team: 'LAL', img: '/images/moment-40000.jpg' }
 ]
 </script>
 
@@ -257,6 +262,7 @@ const timeline = [
           <div v-for="(t, i) in timeline" :key="t.year + t.title" class="timeline-item" :class="{ right: i % 2 === 1 }">
             <div class="timeline-dot"></div>
             <div class="timeline-card">
+              <img class="timeline-img" :src="t.img" :alt="t.title" loading="lazy" />
               <div class="timeline-year">{{ t.year }} <span class="timeline-team">{{ t.team }}</span></div>
               <h3>{{ t.title }}</h3>
               <p>{{ t.desc }}</p>
@@ -480,7 +486,7 @@ const timeline = [
 .hero-bg {
   position: absolute;
   inset: 0;
-  background: url('/images/hero-bg.png') center 30% / cover no-repeat;
+  background: url('/images/hero-bg.jpg') center 30% / cover no-repeat;
   animation: heroZoom 18s ease-out forwards;
 }
 @keyframes heroZoom {
@@ -715,11 +721,21 @@ const timeline = [
   left: -7px;
 }
 .timeline-card {
-  padding: 18px 20px;
+  padding: 14px 16px 18px;
   background: rgba(26, 12, 46, 0.65);
   border: 1px solid rgba(140, 110, 190, 0.28);
   border-radius: 14px;
   transition: transform 0.2s, border-color 0.2s;
+}
+.timeline-img {
+  display: block;
+  width: 100%;
+  height: 170px;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  background: rgba(85, 37, 131, 0.3);
 }
 .timeline-card:hover {
   transform: translateY(-3px);

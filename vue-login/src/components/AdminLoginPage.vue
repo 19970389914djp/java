@@ -57,21 +57,21 @@ async function handleSubmit() {
   <div class="admin-login-page">
     <div class="watermark" aria-hidden="true">ADMIN</div>
     <div class="login-card">
-      <div class="login-header">
-        <div class="overline">MANAGEMENT</div>
-        <h1>后台管理登录</h1>
-        <p>仅限管理员 · 账密登录，无注册入口</p>
-      </div>
-
-      <div class="msg" :class="msgType">{{ message }}</div>
-
-      <form class="login-form" @submit.prevent="handleSubmit" autocomplete="off">
-        <div class="field">
-          <label for="admin-account">账号</label>
-          <div class="input-wrap">
-            <input id="admin-account" type="text" v-model="username" placeholder="请输入管理员账号" />
-          </div>
+        <div class="login-header">
+          <div class="overline">MANAGEMENT</div>
+          <h1>后台管理登录</h1>
+          <p>仅限管理员权限账号（permission=0）登录</p>
         </div>
+
+        <div class="msg" :class="msgType">{{ message }}</div>
+
+        <form class="login-form" @submit.prevent="handleSubmit" autocomplete="off">
+          <div class="field">
+            <label for="admin-account">账号（邮箱）</label>
+            <div class="input-wrap">
+              <input id="admin-account" type="text" v-model="username" placeholder="请输入管理员邮箱" />
+            </div>
+          </div>
 
         <div class="field">
           <label for="admin-password">密码</label>

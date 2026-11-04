@@ -18,11 +18,14 @@ public class User {
     /** 邮箱（注册账号，唯一） */
     private String email;
 
-    /** 密码（MD5 + 盐存储） */
+    /** 密码（明文存储，学习项目不做加密） */
     private String password;
 
     /** 昵称 */
     private String nickname;
+
+    /** 权限：1=默认用户，0=管理员 */
+    private Integer permission;
 
     private LocalDateTime createTime;
 
@@ -58,6 +61,14 @@ public class User {
 
     public void setNickname(String nickname) {
         this.nickname = nickname;
+    }
+
+    public Integer getPermission() {
+        return permission;
+    }
+
+    public void setPermission(Integer permission) {
+        this.permission = permission;
     }
 
     public LocalDateTime getCreateTime() {

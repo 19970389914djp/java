@@ -26,8 +26,12 @@
 
 ## 后台管理系统
 
-- 首页导航栏右侧「后台管理」按钮 → 后台登录页（仅账密登录，无注册）→ 后台管理面板
-- 默认管理员账号：`admin` / `admin123`（建表脚本 `springboottest/sql/admin.sql`，MD5+盐存储）
+- 首页导航栏右侧「后台管理」按钮 → 后台登录页（仅账密登录，无注册）
+- 权限控制：`user` 表 `permission` 字段，`1`=默认用户、`0`=管理员
+  - 仅 `permission=0` 的账号可在首页看到「后台管理」按钮并登录后台
+  - 注册用户默认 `permission=1`，看不到按钮、也无法登录后台
+- 内置管理员账号：`admin@test.com` / `admin123`（见 `springboottest/sql/user_db.sql`）
+- 密码为明文存储（学习项目，不做加密）；旧 `admin` 表已废弃，仅历史保留
 - 可管理首页展示数据：生涯荣誉（honor）、高光时刻（moment）、热门搜索词（hot_keyword）
 - 管理接口前缀 `/api/admin/*`，除登录外均需请求头 `Authorization: <token>`
 

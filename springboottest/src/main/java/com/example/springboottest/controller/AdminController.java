@@ -46,7 +46,7 @@ public class AdminController {
         this.momentMapper = momentMapper;
     }
 
-    /** 后台登录：{ "username": "...", "password": "..." } */
+    /** 后台登录：{ "username": "邮箱", "password": "..." }，仅 permission=0 的管理员账号可登录 */
     @PostMapping("/login")
     public Result<Map<String, Object>> login(@RequestBody Map<String, String> body) {
         return adminService.login(body.get("username"), body.get("password"));

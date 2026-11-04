@@ -25,6 +25,9 @@ public class Moment {
     /** 标签，逗号分隔（如：骑士,总冠军,翻盘） */
     private String tags;
 
+    /** 配图路径（前端优先使用，如 /images/moment-2007-spurs.jpg） */
+    private String image;
+
     /** 展示顺序，越小越靠前 */
     private Integer sortOrder;
 
@@ -66,6 +69,14 @@ public class Moment {
 
     public void setTags(String tags) {
         this.tags = tags;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
     }
 
     public Integer getSortOrder() {

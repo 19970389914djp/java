@@ -4,7 +4,10 @@ import { getHome, searchMoments } from '../api/home'
 
 const emit = defineEmits(['logout', 'go-admin'])
 
-const userInfo = ref({ nickname: '', email: '' })
+const userInfo = ref({ nickname: '', email: '', permission: 1 })
+
+// 仅 permission=0（管理员）可见后台管理按钮
+const isAdmin = computed(() => Number(userInfo.value.permission) === 0)
 
 onMounted(() => {
   try {
@@ -79,6 +82,10 @@ function imageFor(m) {
   if (t.includes('The Block') || t.includes('追身大帽') || t.includes('防守')) return IMG_BLOCK
   if (t.includes('40000') || t.includes('里程碑') || t.includes('得分王')) return IMG_40000
   if (t.includes('粉笔') || t.includes('仪式')) return IMG_RITUAL
+  if (/摊手|一跪|撸头|推手|垫脚|伸腿|看戏/.test(t)) return IMG_RITUAL
+  if (t.includes('快攻')) return IMG_DRAFT
+  if (/马刺|小牛|2011|2015|2017/.test(t)) return IMG_BLOCK
+  if (t.includes('戳眼') || t.includes('40000') || t.includes('横扫')) return IMG_40000
   if (/总冠军|紫金|2020|湖人/.test(t)) return IMG_TROPHY
   if (t.includes('2016') || t.includes('骑士') || t.includes('翻盘')) return IMG_BLOCK
   return galleryImages[(m.sortOrder || 0) % galleryImages.length]
@@ -182,7 +189,7 @@ const timeline = [
       </nav>
 
       <div class="user-area">
-        <button class="admin-btn" @click="emit('go-admin')">
+        <button v-if="isAdmin" class="admin-btn" @click="emit('go-admin')">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 2 L20 5 V11 C20 16.5 16.6 20.6 12 22 C7.4 20.6 4 16.5 4 11 V5 Z"
                   fill="none" stroke-width="1.6" />
@@ -300,7 +307,7 @@ const timeline = [
         <div v-if="filteredMoments.length" class="moment-grid">
           <article v-for="m in filteredMoments" :key="m.id || m.title" class="moment-card">
             <div class="moment-img-wrap">
-              <img :src="imageFor(m)" :alt="m.title" loading="lazy" />
+              <img :src="m.image || imageFor(m)" :alt="m.title" loading="lazy" />
               <span class="moment-year">{{ m.year }}</span>
             </div>
             <div class="moment-body">

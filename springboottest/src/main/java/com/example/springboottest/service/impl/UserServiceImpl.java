@@ -7,9 +7,7 @@ import com.example.springboottest.entity.User;
 import com.example.springboottest.mapper.UserMapper;
 import com.example.springboottest.service.UserService;
 import org.springframework.stereotype.Service;
-import org.springframework.util.DigestUtils;
 
-import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -20,8 +18,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
-    /** 密码加盐值 */
-    private static final String SALT = "@vue-login";
+    /** 权限常量：1=默认用户，0=管理员 */
+    public static final int PERMISSION_USER = 1;
+    public static final int PERMISSION_ADMIN = 0;
 
     /** 验证码有效期（毫秒）：5 分钟 */
     private static final long CODE_TTL = 5 * 60 * 1000L;
@@ -71,8 +70,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         User user = new User();
         user.setEmail(email);
-        user.setPassword(encrypt(password));
+        user.setPassword(password); // 明文存储（学习项目）
         user.setNickname(email.substring(0, email.indexOf('@')));
+        user.setPermission(PERMISSION_USER); // 注册用户默认权限
         user.setCreateTime(LocalDateTime.now());
         user.setUpdateTime(LocalDateTime.now());
         save(user);
@@ -100,7 +100,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user == null) {
             return Result.error("账号不存在，请先注册");
         }
-        if (!user.getPassword().equals(encrypt(password))) {
+        if (!user.getPassword().equals(password)) { // 明文比对
             return Result.error("密码错误");
         }
 
@@ -115,6 +115,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         userInfo.put("id", user.getId());
         userInfo.put("email", user.getEmail());
         userInfo.put("nickname", user.getNickname());
+        userInfo.put("permission", user.getPermission());
         data.put("userInfo", userInfo);
         return Result.success("登录成功", data);
     }
@@ -136,10 +137,5 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             return "验证码不正确";
         }
         return null;
-    }
-
-    /** MD5 + 盐加密 */
-    private String encrypt(String password) {
-        return DigestUtils.md5DigestAsHex((password + SALT).getBytes(StandardCharsets.UTF_8));
     }
 }

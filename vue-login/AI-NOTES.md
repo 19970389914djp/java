@@ -58,11 +58,15 @@
 
 - 全站湖人紫（#552583 系）+ 金（#FDB927）暗色主题，皇冠 SVG、23 号角标等元素复用。
 - **HomePage（首页，登录后进入）**：King James 展示页。导航 `King James | 首页·生涯荣誉·经典时刻·关于詹姆斯`（锚点滚动 + IntersectionObserver 滚动高亮）；全屏 Hero（AI 图 `public/images/hero-bg.png`，标题 KING JAMES / STRIVE FOR GREATNESS / 「查看生涯荣誉」按钮）；关于三卡（静态）；荣誉卡 6 张（DB 驱动 honor 表）；生涯时间轴 7 节点（组件内 `timeline` 静态数组）；经典时刻图文图集（moment 数据 + 4 张 AI 插画按标题匹配 `imageFor()` + 热词芯片筛选调 `/api/search`）。导航栏右侧有「后台管理」按钮（emit `go-admin`）。
-- **后台管理系统（2026-10-28 新增）**：
+- **后台管理系统（2026-10-28 新增；2026-11-04 权限改造）**：
   - `AdminLoginPage.vue`（仅账密登录无注册）→ `AdminPage.vue`（honor / moment / hot_keyword 三模块表格 CRUD，弹窗表单 + 删除确认）。
-  - 后端 `/api/admin/*`：`AdminController`/`AdminService`/`Admin`/`AdminMapper`，除 login 外均需请求头 `Authorization: <token>`（内存 token，后端重启失效）。
-  - `admin` 表建表脚本 `springboottest\sql\admin.sql`。账号：`admin/admin123`、`demo@test.com/demo123`（MD5+盐 `@vue-login`，与前台一致）。
+  - **权限模型（2026-11-04 改造）**：`user` 表新增 `permission` 字段，`1`=默认用户（注册默认值）、`0`=管理员。
+    - 前端：`HomePage.vue` 仅 `userInfo.permission === 0` 时渲染「后台管理」按钮（`v-if="isAdmin"`）。
+    - 后端：`/api/admin/login` 校验 **user 表**（邮箱 + 明文密码）且要求 `permission=0`，否则报"该账号没有管理员权限"。**旧 `admin` 表已废弃**（`admin.sql` 仅历史保留）。
+    - 内置管理员：`admin@test.com / admin123`（`user_db.sql` 内置，permission=0）。
+  - **密码为明文存储**（2026-11-04 起，学习项目不加密）；前台注册/登录与后台登录都比对明文。
   - 前端接口封装 `src/api/admin.js`；App.vue 页面状态机：login/register/home/adminLogin/adminPage。
+  - 注意：改造前已登录的用户 localStorage 里没有 permission，需重新登录后按钮才按权限显示。
 - 退出登录逻辑未变（清 localStorage 后回登录页）。
 
 ## 给 AI 的维护提醒
@@ -79,9 +83,9 @@
   ```
   "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -uroot -p123456 < springboottest\sql\user_db.sql
   "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -uroot -p123456 < springboottest\sql\home.sql
-  "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -uroot -p123456 < springboottest\sql\admin.sql
   ```
-  `user_db.sql` 是 `CREATE DATABASE/TABLE IF NOT EXISTS`，重复执行安全；`home.sql`（首页功能三表：honor/moment/hot_keyword，2026-10-16 新增）是 DROP + 重建 + 灌数据，**会重置首页展示数据**，重复执行安全但会还原种子数据；`admin.sql`（后台管理员表，2026-10-28 新增）是 DROP + 重建 + 灌默认账号，重复执行安全。
+  `user_db.sql`（含 permission 字段与内置管理员 admin@test.com/admin123）与 `home.sql` 都是幂等的，重复执行安全；`home.sql` 会 DROP + 重建 + 灌数据，还原首页展示种子数据。
+- **已有库升级权限字段**：执行 `springboottest\sql\upgrade_permission.sql`（幂等：无 permission 列则新增 + 修改密码注释 + 补管理员账号）。
 - **首页后端（2026-10-16 新增）**：实体 `Moment`/`Honor`/`HotKeyword` + 对应 Mapper + `HomeService`/`HomeServiceImpl` + `HomeController`。接口：
   - `GET /api/home` → `{ honors, hotKeywords, moments }`（荣誉/热词/全部时刻，按 sort_order 排序）
   - `GET /api/search?keyword=xxx` → `{ moments, total }`（按年份/标题/描述/标签 LIKE 模糊匹配，空关键词返回全部）

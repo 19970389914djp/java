@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { getHome, searchMoments } from '../api/home'
 
 const emit = defineEmits(['logout', 'go-admin'])
@@ -20,6 +20,7 @@ onMounted(() => {
   }
   loadHome()
   initScrollSpy()
+  window.addEventListener('keydown', onDetailKeydown)
 })
 
 // 滚动到哪个板块就高亮对应导航
@@ -119,11 +120,34 @@ async function doSearch(k) {
     const res = await searchMoments(k)
     if (seq !== searchSeq) return
     moments.value = (res.data.moments || []).map((m) => ({ ...m, tags: toTags(m.tags) }))
+    // 搜索出结果后，自动跳转到结果所在的页面位置（经典时刻板块）
+    jumpToResults()
   } catch (e) {
     if (seq === searchSeq) {
       loadError.value = '搜索失败：' + (e.message || '网络异常')
     }
   }
+}
+
+// ===== 搜索跳转：滚动到结果区域并高亮第一条命中 =====
+const searching = ref(false) // 跳转期间给卡片加过渡遮罩，避免滚动中布局跳动
+
+async function jumpToResults() {
+  searching.value = true
+  const sec = document.getElementById('moments')
+  sec?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  await nextTick()
+  // 等平滑滚动基本完成后解除遮罩（滚动时长约 500ms）
+  setTimeout(() => { searching.value = false }, 600)
+}
+
+// 判断某条时刻是否命中当前关键词（用于结果高亮）
+function isHit(m) {
+  const kw = keyword.value.trim().toLowerCase()
+  if (!kw) return false
+  const text = [m.title, m.year, (m.tags || []).join(' '), m.description]
+    .join(' ').toLowerCase()
+  return text.includes(kw)
 }
 
 watch(keyword, (k) => {
@@ -140,6 +164,7 @@ watch(keyword, (k) => {
 onUnmounted(() => {
   clearTimeout(searchTimer)
   if (navObserver) navObserver.disconnect()
+  window.removeEventListener('keydown', onDetailKeydown)
 })
 
 function setKeyword(k) {
@@ -147,6 +172,103 @@ function setKeyword(k) {
 }
 
 const filteredMoments = computed(() => moments.value)
+
+// ===== 详情弹窗：点击任意模块卡片查看详情 =====
+const detailModal = ref(null) // { img, title, meta, paras[], tags[] }
+
+function openDetail(d) {
+  detailModal.value = d
+}
+function closeDetail() {
+  detailModal.value = null
+}
+function onDetailKeydown(e) {
+  if (e.key === 'Escape') closeDetail()
+}
+
+// 荣誉卡详情文案（按荣誉名匹配）
+const HONOR_DETAILS = {
+  '总冠军': [
+    '生涯 4 次捧起奥布莱恩杯：2012、2013 年随迈阿密热火两连冠，2016 年率克利夫兰骑士完成 1-3 史诗翻盘，2020 年在奥兰多园区为洛杉矶湖人夺得队史第 17 冠。',
+    '四次夺冠均当选总决赛 MVP，是历史上唯一在三支不同球队均以核心身份夺冠并包揽 FMVP 的球员。'
+  ],
+  '总决赛 MVP': [
+    '4 次总决赛 MVP：2012、2013（热火）、2016（骑士）、2020（湖人）。',
+    '2016 年总决赛五项数据（得分、篮板、助攻、抢断、盖帽）领跑两队所有球员，历史唯一。'
+  ],
+  '常规赛 MVP': [
+    '4 次常规赛 MVP：2009、2010 年在克利夫兰骑士蝉联，2012、2013 年在迈阿密热火再度蝉联。',
+    '其中 2013 年差 1 票全票当选，该赛季同时包揽总冠军 + FMVP + 最佳防守阵容一阵。'
+  ],
+  '全明星': [
+    '自 2005 年起连续 20 个赛季入选 NBA 全明星，入选次数历史第一，多次担任队长。',
+    '3 次荣膺全明星赛 MVP（2006、2008、2018）。'
+  ],
+  '历史总得分王': [
+    '2023 年 2 月超越卡里姆·阿卜杜尔-贾巴尔，登顶 NBA 历史总得分榜。',
+    '2024 年 3 月成为历史首位生涯总得分突破 40000 分的球员，前无古人。'
+  ],
+  '历史助攻王': [
+    '生涯助攻突破 11000 次，是 NBA 历史唯一达成「40000 分 + 10000 篮板 + 10000 助攻」的球员。',
+    '以组织前锋身份重新定义了篮球场上全能战士的标准。'
+  ]
+}
+
+// 关于詹姆斯：卡片数据 + 详情
+const aboutCards = [
+  {
+    icon: '🏠', title: '阿克伦之子',
+    desc: '1984 年生于俄亥俄州阿克伦，从圣文森特-圣玛丽高中直接进入 NBA，用天赋与自律扛起一座城市的希望。',
+    detail: [
+      '1984 年 12 月 30 日出生于俄亥俄州阿克伦，由单亲母亲抚养长大，童年多次搬家。',
+      '高中就读于圣文森特-圣玛丽高中，三次率队夺得州冠军，登上《体育画报》封面，被誉为「天选之子（The Chosen One）」。',
+      '2003 年以高中生身份当选 NBA 选秀状元，被家乡球队克利夫兰骑士选中，从此扛起一座城市的冠军梦想。'
+    ]
+  },
+  {
+    icon: '👑', title: 'NBA 传奇',
+    desc: '20+ 个赛季常青树，历史唯一「40000 分 + 10000 篮板 + 10000 助攻」先生，四个时代的三双与纪录收割机。',
+    detail: [
+      '职业生涯横跨 2003 至今 20 余载，从骑士、热火、再回骑士到湖人，在每个阶段都保持联盟顶级水准。',
+      'NBA 历史唯一达成 40000 分 + 10000 篮板 + 10000 助攻的球员，20 次全明星、20 次最佳阵容均创历史纪录。',
+      '四次带领三支不同球队夺冠且全获 FMVP，2016 年为克利夫兰带来 52 年首个职业体育总冠军。'
+    ]
+  },
+  {
+    icon: '🏀', title: '历史得分王',
+    desc: '2023 年超越贾巴尔登顶 NBA 历史总得分榜，2024 年成为首位突破 40000 分的球员，前无古人。',
+    detail: [
+      '2023 年 2 月 8 日对阵雷霆，一记翻身后仰跳投超越贾巴尔的 38387 分，加冕 NBA 历史得分王。',
+      '2024 年 3 月对阵掘金，生涯总得分突破 40000 分大关，成为历史第一人。',
+      '职业生涯场均 27+ 分，连续 20 个赛季场均得分 25+，得分稳定性历史罕见。'
+    ]
+  }
+]
+function openAboutDetail(card) {
+  openDetail({ title: card.title, meta: '关于詹姆斯', paras: card.detail, tags: [] })
+}
+function openHonorDetail(h) {
+  const paras = HONOR_DETAILS[h.label] || [h.label + '：' + h.value]
+  openDetail({ title: h.label, meta: '生涯荣誉 · ' + h.value, paras, tags: [] })
+}
+function openMomentDetail(m) {
+  openDetail({
+    img: m.image || imageFor(m),
+    title: m.title,
+    meta: '经典时刻 · ' + (m.year || ''),
+    paras: [m.description || '暂无详细介绍。'],
+    tags: m.tags || []
+  })
+}
+function openTimelineDetail(t) {
+  openDetail({
+    img: t.img,
+    title: t.title,
+    meta: '生涯时间轴 · ' + t.year + ' ' + t.team,
+    paras: [t.desc],
+    tags: []
+  })
+}
 
 // ===== 生涯时间轴（静态内容） =====
 const timeline = [
@@ -188,6 +310,21 @@ const timeline = [
         </a>
       </nav>
 
+      <!-- 全局搜索：任意位置输入，自动跳转到结果所在位置 -->
+      <div class="nav-search">
+        <svg class="nav-search-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" fill="none" stroke-width="2" />
+          <line x1="16.5" y1="16.5" x2="21" y2="21" stroke-width="2" />
+        </svg>
+        <input
+          v-model="keyword"
+          type="text"
+          placeholder="搜索詹姆斯：2016 / 湖人 / 翻盘…"
+          @keyup.enter="jumpToResults"
+        />
+        <button v-if="keyword" class="nav-search-clear" @click="keyword = ''" aria-label="清空搜索">×</button>
+      </div>
+
       <div class="user-area">
         <button v-if="isAdmin" class="admin-btn" @click="emit('go-admin')">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -227,20 +364,19 @@ const timeline = [
           <span class="head-line"></span>
         </div>
         <div class="about-grid">
-          <div class="about-card">
-            <div class="about-icon">🏠</div>
-            <h3>阿克伦之子</h3>
-            <p>1984 年生于俄亥俄州阿克伦，从圣文森特-圣玛丽高中直接进入 NBA，用天赋与自律扛起一座城市的希望。</p>
-          </div>
-          <div class="about-card">
-            <div class="about-icon">👑</div>
-            <h3>NBA 传奇</h3>
-            <p>20+ 个赛季常青树，历史唯一「40000 分 + 10000 篮板 + 10000 助攻」先生，四个时代的三双与纪录收割机。</p>
-          </div>
-          <div class="about-card">
-            <div class="about-icon">🏀</div>
-            <h3>历史得分王</h3>
-            <p>2023 年超越贾巴尔登顶 NBA 历史总得分榜，2024 年成为首位突破 40000 分的球员，前无古人。</p>
+          <div
+            v-for="card in aboutCards"
+            :key="card.title"
+            class="about-card clickable"
+            role="button"
+            tabindex="0"
+            @click="openAboutDetail(card)"
+            @keyup.enter="openAboutDetail(card)"
+          >
+            <div class="about-icon">{{ card.icon }}</div>
+            <h3>{{ card.title }}</h3>
+            <p>{{ card.desc }}</p>
+            <span class="more-hint">点击查看详情 ›</span>
           </div>
         </div>
       </section>
@@ -252,7 +388,15 @@ const timeline = [
           <span class="head-line"></span>
         </div>
         <div class="honor-grid">
-          <div v-for="h in honors" :key="h.label" class="honor-card">
+          <div
+            v-for="h in honors"
+            :key="h.label"
+            class="honor-card clickable"
+            role="button"
+            tabindex="0"
+            @click="openHonorDetail(h)"
+            @keyup.enter="openHonorDetail(h)"
+          >
             <div class="honor-value">{{ h.value }}</div>
             <div class="honor-label">{{ h.label }}</div>
           </div>
@@ -268,7 +412,13 @@ const timeline = [
         <div class="timeline">
           <div v-for="(t, i) in timeline" :key="t.year + t.title" class="timeline-item" :class="{ right: i % 2 === 1 }">
             <div class="timeline-dot"></div>
-            <div class="timeline-card">
+            <div
+              class="timeline-card clickable"
+              role="button"
+              tabindex="0"
+              @click="openTimelineDetail(t)"
+              @keyup.enter="openTimelineDetail(t)"
+            >
               <img class="timeline-img" :src="t.img" :alt="t.title" loading="lazy" />
               <div class="timeline-year">{{ t.year }} <span class="timeline-team">{{ t.team }}</span></div>
               <h3>{{ t.title }}</h3>
@@ -304,8 +454,17 @@ const timeline = [
           </a>
         </div>
 
-        <div v-if="filteredMoments.length" class="moment-grid">
-          <article v-for="m in filteredMoments" :key="m.id || m.title" class="moment-card">
+        <div v-if="filteredMoments.length" class="moment-grid" :class="{ dimmed: searching }">
+          <article
+            v-for="m in filteredMoments"
+            :key="m.id || m.title"
+            class="moment-card clickable"
+            :class="{ hit: !!keyword.trim() }"
+            role="button"
+            tabindex="0"
+            @click="openMomentDetail(m)"
+            @keyup.enter="openMomentDetail(m)"
+          >
             <div class="moment-img-wrap">
               <img :src="m.image || imageFor(m)" :alt="m.title" loading="lazy" />
               <span class="moment-year">{{ m.year }}</span>
@@ -330,6 +489,24 @@ const timeline = [
     <footer class="footer">
       KING JAMES · STRIVE FOR GREATNESS · 数据由后端接口提供（/api/home、/api/search）
     </footer>
+
+    <!-- ===== 详情弹窗 ===== -->
+    <Transition name="modal-fade">
+      <div v-if="detailModal" class="detail-overlay" @click.self="closeDetail">
+        <div class="detail-modal" role="dialog" aria-modal="true">
+          <button class="detail-close" @click="closeDetail" aria-label="关闭详情">×</button>
+          <img v-if="detailModal.img" class="detail-img" :src="detailModal.img" :alt="detailModal.title" />
+          <div class="detail-body">
+            <div class="detail-meta">{{ detailModal.meta }}</div>
+            <h2 class="detail-title">{{ detailModal.title }}</h2>
+            <p v-for="(p, i) in detailModal.paras" :key="i" class="detail-para">{{ p }}</p>
+            <div v-if="detailModal.tags && detailModal.tags.length" class="detail-tags">
+              <span v-for="t in detailModal.tags" :key="t" class="tag"># {{ t }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -348,9 +525,9 @@ const timeline = [
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 20px;
   height: 64px;
-  padding: 0 32px;
+  padding: 0 24px;
   background: rgba(14, 6, 25, 0.85);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -381,15 +558,17 @@ const timeline = [
 
 .nav-links {
   display: flex;
-  gap: 6px;
-  flex: 1;
+  gap: 2px;
+  flex: 0 1 auto;
   justify-content: center;
+  min-width: 0;
 }
 .nav-item {
   position: relative;
   padding: 8px 18px;
   font-size: 14px;
   letter-spacing: 2px;
+  white-space: nowrap;
   color: rgba(245, 240, 255, 0.65);
   text-decoration: none;
   border-radius: 8px;
@@ -419,6 +598,68 @@ const timeline = [
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+}
+
+/* ===== 导航栏全局搜索 ===== */
+.nav-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 200px;
+  height: 36px;
+  padding: 0 34px 0 12px;
+  margin-left: auto;
+  background: rgba(26, 12, 46, 0.75);
+  border: 1px solid rgba(140, 110, 190, 0.4);
+  border-radius: 999px;
+  transition: border-color 0.2s, box-shadow 0.2s, width 0.25s;
+}
+.nav-search:focus-within {
+  width: 250px;
+  border-color: #fdb927;
+  box-shadow: 0 0 18px rgba(253, 185, 39, 0.18);
+}
+.nav-search-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  stroke: rgba(253, 185, 39, 0.85);
+  fill: none;
+}
+.nav-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+.nav-search input::placeholder {
+  color: rgba(245, 240, 255, 0.35);
+}
+.nav-search-clear {
+  position: absolute;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(140, 110, 190, 0.3);
+  color: rgba(245, 240, 255, 0.85);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.nav-search-clear:hover {
+  background: rgba(253, 185, 39, 0.35);
+  color: #fff;
 }
 .admin-btn {
   display: flex;
@@ -844,6 +1085,23 @@ const timeline = [
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 20px;
 }
+/* 搜索跳转滚动期间轻微压暗，减少布局跳动观感 */
+.moment-grid.dimmed {
+  opacity: 0.55;
+  transition: opacity 0.3s;
+}
+/* 命中当前搜索词的卡片高亮描边 */
+.moment-card.hit {
+  border-color: rgba(253, 185, 39, 0.65);
+  animation: hitPulse 1.6s ease-out 1;
+}
+.moment-grid .moment-card.hit:first-child {
+  box-shadow: 0 0 0 2px rgba(253, 185, 39, 0.55), 0 16px 44px rgba(0, 0, 0, 0.4);
+}
+@keyframes hitPulse {
+  0% { box-shadow: 0 0 0 3px rgba(253, 185, 39, 0.65); }
+  100% { box-shadow: 0 0 0 0 rgba(253, 185, 39, 0); }
+}
 .moment-card {
   overflow: hidden;
   background: rgba(26, 12, 46, 0.62);
@@ -930,6 +1188,120 @@ const timeline = [
   color: rgba(245, 240, 255, 0.5);
 }
 
+/* ===== 可点击卡片 ===== */
+.clickable {
+  cursor: pointer;
+}
+.clickable:focus-visible {
+  outline: 2px solid rgba(253, 185, 39, 0.7);
+  outline-offset: 2px;
+}
+.more-hint {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 12px;
+  color: rgba(253, 185, 39, 0.75);
+  letter-spacing: 1px;
+}
+
+/* ===== 详情弹窗 ===== */
+.detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(10, 4, 18, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.detail-modal {
+  position: relative;
+  width: min(620px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+  background: linear-gradient(160deg, rgba(38, 18, 66, 0.98), rgba(20, 9, 36, 0.98));
+  border: 1px solid rgba(253, 185, 39, 0.4);
+  border-radius: 18px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), 0 0 40px rgba(253, 185, 39, 0.1);
+}
+.detail-img {
+  display: block;
+  width: 100%;
+  height: 260px;
+  object-fit: cover;
+  border-radius: 18px 18px 0 0;
+  background: rgba(85, 37, 131, 0.3);
+}
+.detail-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(253, 185, 39, 0.5);
+  border-radius: 50%;
+  background: rgba(14, 6, 25, 0.75);
+  color: #fdb927;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.detail-close:hover {
+  background: #fdb927;
+  color: #241043;
+}
+.detail-body {
+  padding: 24px 30px 30px;
+}
+.detail-meta {
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: rgba(253, 185, 39, 0.8);
+}
+.detail-title {
+  margin-top: 8px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #fff;
+}
+.detail-para {
+  margin-top: 14px;
+  font-size: 14px;
+  line-height: 2;
+  color: rgba(245, 240, 255, 0.75);
+}
+.detail-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+/* 弹窗过渡动画 */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+.modal-fade-enter-active .detail-modal {
+  animation: modalZoom 0.28s ease-out;
+}
+@keyframes modalZoom {
+  from { transform: scale(0.92) translateY(12px); opacity: 0.6; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
 /* ===== 页脚 ===== */
 .footer {
   position: relative;
@@ -943,6 +1315,18 @@ const timeline = [
 }
 
 /* ===== 小屏适配 ===== */
+@media (max-width: 1100px) {
+  .nav-item {
+    padding: 8px 10px;
+    letter-spacing: 1px;
+  }
+  .nav-search {
+    width: 170px;
+  }
+  .nav-search:focus-within {
+    width: 200px;
+  }
+}
 @media (max-width: 900px) {
   .nav-links {
     display: none;
@@ -969,6 +1353,13 @@ const timeline = [
 @media (max-width: 560px) {
   .navbar {
     padding: 0 16px;
+  }
+  .nav-search {
+    width: 150px;
+    padding-right: 30px;
+  }
+  .nav-search:focus-within {
+    width: 190px;
   }
   .admin-btn span {
     display: none;
